@@ -1,4 +1,4 @@
-
+// backend/routes/account.js
 const express = require('express');
 const { authMiddleware } = require('../middleware');
 const { Account } = require('../db');
@@ -16,7 +16,7 @@ router.get("/balance", authMiddleware, async (req, res) => {
     })
 });
 
-async function transfer(req) {
+router.post("/transfer", authMiddleware, async (req, res) => {
     const session = await mongoose.startSession();
 
     session.startTransaction();
@@ -27,16 +27,18 @@ async function transfer(req) {
 
     if (!account || account.balance < amount) {
         await session.abortTransaction();
-        console.log("Insufficient balance")
-        return;
+        return res.status(400).json({
+            message: "Insufficient balance"
+        });
     }
 
     const toAccount = await Account.findOne({ userId: to }).session(session);
 
     if (!toAccount) {
         await session.abortTransaction();
-        console.log("Invalid account")
-        return;
+        return res.status(400).json({
+            message: "Invalid account"
+        });
     }
 
     // Perform the transfer
@@ -45,22 +47,9 @@ async function transfer(req) {
 
     // Commit the transaction
     await session.commitTransaction();
-    console.log("done")
-}
+    res.json({
+        message: "Transfer successful"
+    });
+});
 
-transfer({
-    userId: "65ac44e10ab2ec750ca666a5",
-    body: {
-        to: "65ac44e40ab2ec750ca666aa",
-        amount: 100
-    }
-})
-
-transfer({
-    userId: "65ac44e10ab2ec750ca666a5",
-    body: {
-        to: "65ac44e40ab2ec750ca666aa",
-        amount: 100
-    }
-})
 module.exports = router;
